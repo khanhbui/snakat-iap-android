@@ -1,5 +1,7 @@
 # snakat-iap-android
 
+A wrapper of [Google Play Billing Library](https://developer.android.com/google/play/billing) that you no need to care about connecting the BillingClient, just call the method (*getProducts*, *purchase*, *acknowledge*, *consume*, *restorePurchase*) whenever you want.
+
 ## Installation
 1. Add this to your project as a git submodule
 ```sh
@@ -21,7 +23,10 @@ ext {
     ]
 
     dependencies = [
-        billing: 'com.android.billingclient:billing:4.1.0'
+            appcompat: 'androidx.appcompat:appcompat:1.4.1',
+            billing: 'com.android.billingclient:billing:4.1.0',
+            rxjava: 'io.reactivex.rxjava2:rxjava:2.2.21',
+            rxandroid: 'io.reactivex.rxjava2:rxandroid:2.1.1'
     ]
 }
 ```
@@ -44,21 +49,33 @@ implementation project(path: ':snakat-iap')
 ```java
 public class App extends Application {
 
-    @Override
-    public void onCreate() {
-        super.onCreate();
+  @Override
+  public void onCreate() {
+    super.onCreate();
 
-        Context context = getApplicationContext();
-        Purchaser.createInstance(context);
-    }
+    Context context = getApplicationContext();
 
-    @Override
-    public void onTerminate() {
-        Purchaser.destroyInstance();
+    ProductList products = new ProductList();
+    // An one-time purchase product.
+    products.add(new Product("com.example.sku1", Product.Type.ONE_TIME));
+    // A consumable purchase product.
+    products.add(new Product("com.example.sku2", Product.Type.CONSUMABLE));
 
-        super.onTerminate();
-    }
+    Purchaser.createInstance(context, product);
+  }
+
+  @Override
+  public void onTerminate() {
+    Purchaser.destroyInstance();
+
+    super.onTerminate();
+  }
 }
+```
+
+If you want to see logs while developing your app, enable the logging by passing *true* to the third parameter.
+```java
+Purchaser.createInstance(context, product, true);
 ```
 
 ### Get Products
@@ -66,45 +83,29 @@ public class App extends Application {
 List<String> skuList = new ArrayList<>();
 skuList.add("com.example.sku");
 
-Purchaser.getInstance().getProducts(skuList)
+Purchaser.getInstance()
+  .getProducts(skuList)
   .subscribeOn(Schedulers.io())
   .observeOn(AndroidSchedulers.mainThread())
-  .subscribe(new SingleObserver<List<SkuDetails>>() {
+  .subscribe(new SingleObserver<ProductList>() {
     @Override
     public void onSubscribe(Disposable d) {
-        mCompositeDisposable.add(d);
+      // Getting products started.
+
+      mCompositeDisposable.add(d);
     }
 
     @Override
-    public void onSuccess(List<SkuDetails> products) {
+    public void onSuccess(ProductList products) {
+      // Getting products done with a list of products.
+
       mView.showProducts(products);
     }
 
     @Override
     public void onError(Throwable e) {
-      mView.showError(e);
-    }
-  });
-```
+      // Getting products failed.
 
-### Get purchased products
-```java
-Purchaser.getInstance().getPurchases()
-  .subscribeOn(Schedulers.io())
-  .observeOn(AndroidSchedulers.mainThread())
-  .subscribe(new SingleObserver<List<Purchase>>() {
-    @Override
-    public void onSubscribe(Disposable d) {
-        mCompositeDisposable.add(d);
-    }
-
-    @Override
-    public void onSuccess(List<Purchase> purchases) {
-      mView.showPurchases(products);
-    }
-
-    @Override
-    public void onError(Throwable e) {
       mView.showError(e);
     }
   });
@@ -113,72 +114,104 @@ Purchaser.getInstance().getPurchases()
 ### Purchase a product
 ```java
 Activity activity = ...;
-SkuDetails product = ...;
+String sku = "com.example.sku";
 
-Purchaser.getInstance().purchase(activity, product, true)
+Purchaser.getInstance()
+  .purchase(activity, sku)
+  .subscribeOn(Schedulers.io())
   .observeOn(AndroidSchedulers.mainThread())
-  .subscribe(new SingleObserver<Purchase>() {
+  .subscribe(new MaybeObserver<Product>() {
     @Override
     public void onSubscribe(Disposable d) {
-        mCompositeDisposable.add(d);
+      // Purchase started.
+
+      mCompositeDisposable.add(d);
     }
 
     @Override
-    public void onSuccess(Purchase purchase) {
-        mView.purchaseSuccess();
+    public void onSuccess(Product product) {
+      // Purchase done.
+
+      // Here now you should do:
+      //  1. Send the corresponding purchaseToken to your backend to verify and grant entitlement.
+      sendToBackend(product.getPurchaseToken());
+
+      //  2. Consume the purchased product if it's consumable product.
+      if (product.isConsumable()) {
+        consumeProduct(product.getSku());
+      }
     }
 
     @Override
     public void onError(Throwable e) {
-        mView.showError(e);
+      // Purchase faileds.
+
+      mView.showError(e);
+    }
+
+    @Override
+    public void onComplete() {
+      // Purchase is in pending state.
+
+      // You should handle the pending purchase by calling restorePurchase in onResume.
     }
   });
 ```
 
-### Acknowledge a purchased product
+Note that the acknowledge will be send automatically at client. If you want to at server side via the Google Developer API or acknowledge manually, please use this.
 ```java
-Purchase purchase = ...;
+Purchaser.getInstance()
+  .purchase(activity, sku, false);
+```
 
-Purchaser.getInstance().acknowledge(purchase)
+### Acknowledge the purchase.
+```java
+String sku = "com.example.sku";
+
+Purchaser.getInstance()
+  .acknowledge(sku)
+  .subscribeOn(Schedulers.io())
   .observeOn(AndroidSchedulers.mainThread())
-  .subscribe(new SingleObserver<Purchase>() {
+  .subscribe(new SingleObserver<Product>() {
     @Override
     public void onSubscribe(Disposable d) {
-        mCompositeDisposable.add(d);
+      // Acknowledge started.
     }
 
     @Override
-    public void onSuccess(Purchase purchase) {
-      mView.acknowledgeSuccess(e);
+    public void onSuccess(Product product) {
+      // Acknowledge done.
     }
 
     @Override
     public void onError(Throwable e) {
-        mView.showError(e);
+      // Acknowledge failed.
     }
   });
 ```
 
 ### Consume a purchased product
 ```java
-Purchase purchase = ...;
+String sku = "com.example.sku";
 
-Purchaser.getInstance().consume(purchase)
+Purchaser.getInstance()
+  .consume(sku)
+  .subscribeOn(Schedulers.io())
   .observeOn(AndroidSchedulers.mainThread())
-  .subscribe(new SingleObserver<Purchase>() {
+  .subscribe(new CompletableObserver() {
     @Override
     public void onSubscribe(Disposable d) {
-        mCompositeDisposable.add(d);
+      // Consume started.
     }
 
     @Override
-    public void onSuccess(Purchase purchase) {
-      mView.consumeSuccess(e);
+    public void onComplete() {
+      // Consume done.
     }
 
     @Override
     public void onError(Throwable e) {
-        mView.showError(e);
+      // Consume failed.
     }
   });
 ```

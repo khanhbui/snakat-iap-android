@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="product_not_found">Product (%s) not found.</string>
+    <string name="product_not_owned">Product (%s) not owned.</string>
+    <string name="product_not_consumable">Product (%s) is not consumable.</string>
+</resources>
