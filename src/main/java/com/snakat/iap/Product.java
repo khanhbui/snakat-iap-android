@@ -79,6 +79,15 @@ public class Product {
         return mSkuDetails != null ? mSkuDetails.getPrice() : null;
     }
 
+    public long getPriceAmount() {
+        return mSkuDetails != null ? mSkuDetails.getPriceAmountMicros() : 0;
+    }
+
+    @Nullable
+    public String getCurrency() {
+        return mSkuDetails != null ? mSkuDetails.getPriceCurrencyCode() : null;
+    }
+
     void setPurchaseToken(@Nullable String purchaseToken) {
         mPurchaseToken = purchaseToken;
     }
@@ -131,7 +140,6 @@ public class Product {
         CONSUMABLE,
         ;
 
-
         @NonNull
         @Override
         public String toString() {
@@ -150,7 +158,6 @@ public class Product {
         PURCHASED,
         PENDING,
         ;
-
 
         @NonNull
         @Override
