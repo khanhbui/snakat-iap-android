@@ -40,7 +40,9 @@ public final class Purchaser extends PurchaserInternal {
 
     public static void createInstance(@NonNull Context context, @NonNull ProductList products, boolean logEnabled) {
         if (mInstance == null) {
-            mInstance = new Purchaser(context, products, logEnabled);
+            synchronized (Purchaser.class) {
+                mInstance = new Purchaser(context, products, logEnabled);
+            }
         }
     }
 

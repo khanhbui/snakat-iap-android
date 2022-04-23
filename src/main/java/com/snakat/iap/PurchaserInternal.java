@@ -137,7 +137,7 @@ abstract class PurchaserInternal {
                                     Log.i(TAG, String.format("BillingClient failed to connect with error: %s", iapError));
                                 }
                                 for (CompletableEmitter item : mConnectEmitters) {
-                                    item.onError(iapError);
+                                    item.tryOnError(iapError);
                                 }
                             }
 
