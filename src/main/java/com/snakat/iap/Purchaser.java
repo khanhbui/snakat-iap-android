@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Context;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.android.billingclient.api.Purchase;
 import com.android.billingclient.api.SkuDetails;
@@ -34,11 +35,19 @@ public final class Purchaser extends PurchaserInternal {
         return mInstance;
     }
 
-    public static void createInstance(@NonNull Context context, @NonNull ProductList products) {
+    public static void createInstance(@NonNull Context context) {
+        createInstance(context, null, false);
+    }
+
+    public static void createInstance(@NonNull Context context, boolean logEnabled) {
+        createInstance(context, null, logEnabled);
+    }
+
+    public static void createInstance(@NonNull Context context, @Nullable ProductList products) {
         createInstance(context, products, false);
     }
 
-    public static void createInstance(@NonNull Context context, @NonNull ProductList products, boolean logEnabled) {
+    public static void createInstance(@NonNull Context context, @Nullable ProductList products, boolean logEnabled) {
         if (mInstance == null) {
             synchronized (Purchaser.class) {
                 mInstance = new Purchaser(context, products, logEnabled);
@@ -51,8 +60,21 @@ public final class Purchaser extends PurchaserInternal {
         mInstance = null;
     }
 
-    private Purchaser(@NonNull Context context, @NonNull ProductList products, boolean logEnabled) {
+    private Purchaser(@NonNull Context context, @Nullable ProductList products, boolean logEnabled) {
         super(context, products, logEnabled);
+    }
+
+    public void addProducts(@NonNull Product product, Product... others) {
+        addProduct(product);
+        if (others != null) {
+            addProducts(others);
+        }
+    }
+
+    public void addProducts(@NonNull Product[] products) {
+        for (Product product : products) {
+            addProduct(product);
+        }
     }
 
     @NonNull

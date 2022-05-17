@@ -43,6 +43,11 @@ public class Product {
         return mSku;
     }
 
+    @NonNull
+    public Type getType() {
+        return mType;
+    }
+
     public boolean isOneTime() {
         return mType == Type.ONE_TIME;
     }
@@ -151,9 +156,29 @@ public class Product {
             }
             return super.toString();
         }
+
+        public int toInt() {
+            switch (this) {
+                case ONE_TIME:
+                    return 0;
+                case CONSUMABLE:
+                    return 1;
+            }
+            return 0;
+        }
+
+        public static Type from(int i) {
+            switch (i) {
+                case 0:
+                    return ONE_TIME;
+                case 1:
+                    return CONSUMABLE;
+            }
+            return ONE_TIME;
+        }
     }
 
-    enum PurchaseState {
+    public enum PurchaseState {
         UNSPECIFIED,
         PURCHASED,
         PENDING,
@@ -171,6 +196,30 @@ public class Product {
                     return "PENDING";
             }
             return super.toString();
+        }
+
+        public int toInt() {
+            switch (this) {
+                case UNSPECIFIED:
+                    return 0;
+                case PURCHASED:
+                    return 1;
+                case PENDING:
+                    return 2;
+            }
+            return 0;
+        }
+
+        public static PurchaseState from(int i) {
+            switch (i) {
+                case 0:
+                    return UNSPECIFIED;
+                case 1:
+                    return PURCHASED;
+                case 2:
+                    return PENDING;
+            }
+            return UNSPECIFIED;
         }
     }
 }

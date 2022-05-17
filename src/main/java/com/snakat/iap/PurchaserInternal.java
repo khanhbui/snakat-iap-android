@@ -61,7 +61,7 @@ abstract class PurchaserInternal {
     protected final List<CompletableEmitter> mConnectEmitters = Collections.synchronizedList(new ArrayList<>());
     protected final Map<String, MaybeEmitter<Purchase>> mPurchaseEmitters = Collections.synchronizedMap(new HashMap<>());
 
-    protected PurchaserInternal(@NonNull Context context, @NonNull ProductList products, boolean logEnabled) {
+    protected PurchaserInternal(@NonNull Context context, @Nullable ProductList products, boolean logEnabled) {
         LOG_ENABLED = logEnabled;
 
         mContext = new WeakReference<>(context);
@@ -75,8 +75,10 @@ abstract class PurchaserInternal {
                 .enablePendingPurchases()
                 .build();
 
-        for (Product product : products) {
-            mProducts.put(product.getSku(), product);
+        if (products != null) {
+            for (Product product : products) {
+                mProducts.put(product.getSku(), product);
+            }
         }
     }
 
@@ -109,6 +111,14 @@ abstract class PurchaserInternal {
             }
             mPurchaseEmitters.clear();
         }
+    }
+
+    protected void addProduct(@NonNull Product product) {
+        String sku = product.getSku();
+        if (mProducts.containsKey(sku)) {
+            return;
+        }
+        mProducts.put(sku, product);
     }
 
     protected Completable startConnection() {
